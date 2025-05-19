@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Upload to Google Drive</title>
+</head>
+<body>
+  <h2>Upload File lên Google Drive</h2>
+  <input type="file" id="fileInput" />
+  <br><br>
+  <progress id="progressBar" value="0" max="100"></progress>
+  <div id="status"></div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', async function () {
+      const file = this.files[0];
+      const chunkSize = 30 * 1024 * 1024; // 30MB
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      let uploaded = 0;
+
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
+        const formData = new FormData();
+        formData.append("chunk", chunk);
+        formData.append("index", i);
+        formData.append("total", totalChunks);
+        formData.append("filename", file.name);
+        formData.append("filesize", file.size);
+
+        const res = await fetch("upload.php", {
+          method: "POST",
+          body: formData
+        });
+
+        const result = await res.json();
+        if (result.status !== "ok") {
+          document.getElementById('status').innerText = `❌ Lỗi: ${result.message}`;
+          return;
+        }
+
+        uploaded += chunk.size;
+        const percent = Math.floor((uploaded / file.size) * 100);
+        document.getElementById("progressBar").value = percent;
+        document.getElementById("status").innerText = `${percent}% (${(uploaded / 1024 / 1024).toFixed(2)}MB / ${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+      }
+
+      document.getElementById("status").innerText = `✅ Upload hoàn tất: ${file.name}`;
+    });
+  </script>
+</body>
+</html>
